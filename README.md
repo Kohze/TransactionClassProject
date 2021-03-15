@@ -1,10 +1,10 @@
-# Wallet Workshop Project
+# Transaction Class Project
 
 
 ![walletImage](https://i.imgur.com/y0GFfDO.png)
 
 
-The https://satolearn.com Wallet Workshop project. A HTML/CSS/JS minimalistic template of a Bitcoin SV wallet under MIT license. 
+The https://satolearn.com Transaction Class project. A HTML/CSS/JS minimalistic template of a Bitcoin SV wallet under MIT license. 
 
 We encourage users to edit the code, play with settings and variables and extend the functionality and design. 
 
@@ -17,6 +17,9 @@ We encourage users to edit the code, play with settings and variables and extend
 - Public Key
 - Address
 - QR Code 
+- UTXO collection
+- filepay transaction
+- minerAPI sending
 
 #### Paperwallet:
 Since all JavaScript sources are loaded via file path, the wallet can be used as offline cold wallet. Make sure to save your word phrase to recover the keys, the project itself has no database integrated to store your key.  
@@ -28,4 +31,4 @@ https://kohze.github.io/WalletWorkshopProject/
 clone the repository and double click the index.html, no node installation required.
 
 #### More:
-If your Project requires a more complex platform integration of wallets with full functionality, feel free to contact us as https://Vaionex.com . 
+If your Project requires a more complex platform integration of wallets with full functionality, feel free to contact us as https://Vaionex.com. 
