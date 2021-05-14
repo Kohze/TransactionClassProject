@@ -131,8 +131,7 @@ generateMnemonic.addEventListener("click", function () {
   utxoUpdateUI();
 });
 
-////////////// Transaction Course Upgrade///////////////
-////////////////////////////////////////////////
+/*---------- Transaction Course Upgrade------------*/
 
 //declare variables
 let sendTransaction = document.getElementById("sendTransaction");
@@ -150,7 +149,6 @@ let utxoCombinedAmount = 0;
 let utxoArrayInput = [];
 let openExplorer;
 
-/////////////////////////////////////////////////////////////
 // refresh UI and update utxo data
 const updateUtxo = function () {
   while (utxoAppend.firstChild) {
@@ -189,7 +187,6 @@ const updateUtxo = function () {
   });
 };
 
-//////////////////////////////////////////////////////////////////
 // animate utxo DIVs that are removed from utxo array
 const animateUtxoDivs = function () {
   utxoArrayInput.forEach(function (a) {
@@ -202,7 +199,6 @@ const animateUtxoDivs = function () {
   });
 };
 
-///////////////////////////////////////////////////////////////////
 // create function to update the UI with timeout to fetch data
 const utxoUpdateUI = function () {
   setTimeout(() => {
@@ -213,7 +209,6 @@ const utxoUpdateUI = function () {
   }, 2500);
 };
 
-/////////////////////////////////////////////////////
 //successful transaction sequence for total UI update
 const txSuccess = function () {
   setTimeout(() => {
@@ -226,12 +221,12 @@ const txSuccess = function () {
   }, 4000);
 };
 
-/////////////////////////////////////////////////////////////////
-// Transaction Course Functions START HERE
+//////////////////////////////////////////////////////
+/*------- Transaction course beginnning ------------*/
+//////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////
-// GET utxo data from address
 // STEP 1
+// GET utxo data from address
 
 const utxoData = function () {
   utxoArray = [];
@@ -245,9 +240,9 @@ const utxoData = function () {
   });
 };
 
-////////////////////////////////////////////////////////////////////
-// create function to see if the satoshis in the utxos are > send amount
 // STEP 2
+// create function to see if the satoshis in the utxos are > send amount
+
 const checkSatoshis = function () {
   utxoCombinedAmount = 0;
   utxoArrayInput = [];
@@ -267,13 +262,13 @@ const checkSatoshis = function () {
   }
 };
 
-/////////////////////////////////////////////////////
-// Add event listener for send button
 // STEP 3
+// Add event listener for send button
 
 sendTransaction.addEventListener("click", function () {
-  // build config
   // STEP 4
+  // build config
+
   checkSatoshis();
   var config = {
     safe: true,
@@ -292,17 +287,18 @@ sendTransaction.addEventListener("click", function () {
     },
   };
 
-  // dust limit error handling
   // STEP 5
+  // dust limit error handling
+
   if (amount.value < 135) {
     console.log("error 64 dust");
     amount.style.outline = " solid red 1px";
     amount.style.color = "red";
     amount.value = "dust limit 135";
   } else {
-    ///////////////////////////////////////////////////////
-    //build tx
     // STEP 6
+    //build tx
+
     try {
       filepay.build(config, function (error, tx) {
         rawTX = tx.toString();
@@ -319,9 +315,9 @@ sendTransaction.addEventListener("click", function () {
   }
 });
 
-////////////////////////////////////////////////////////
-// push tx
 // STEP 7
+// push tx
+
 const pushTx = async () => {
   const res = await axios.post(
     "https://merchantapi.taal.com/mapi/tx",
@@ -349,9 +345,9 @@ const pushTx = async () => {
   };
 };
 
-///////////////////////////////////////////////////////
-// transaction success pop up modal
 //STEP 8
+// transaction success pop up modal
+
 function sentTxModal() {
   Swal.fire(
     "Payment sent",
@@ -359,3 +355,5 @@ function sentTxModal() {
     "success"
   );
 }
+
+/*------- Transaction course end ------------*/
