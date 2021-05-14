@@ -75,7 +75,10 @@
         </div>
         <div
           id="hdPrivateKey"
-          class="uk-card uk-card-default uk-card-body uk-margin-top uk-card-small cardColour"
+          class="
+            uk-card uk-card-default uk-card-body uk-margin-top uk-card-small
+            cardColour
+          "
         >
           HD Private Key
 
@@ -111,7 +114,10 @@
         </div>
         <div
           id="privateKey"
-          class="uk-card uk-card-default uk-card-body uk-margin-top uk-card-small cardColour"
+          class="
+            uk-card uk-card-default uk-card-body uk-margin-top uk-card-small
+            cardColour
+          "
         >
           Private Key
 
@@ -135,7 +141,10 @@
         </div>
         <div
           id="publicKey"
-          class="uk-card uk-card-default uk-card-body uk-margin-top uk-card-small cardColour"
+          class="
+            uk-card uk-card-default uk-card-body uk-margin-top uk-card-small
+            cardColour
+          "
         >
           Public Key
 
@@ -159,7 +168,10 @@
         </div>
         <div
           id="addressDiv"
-          class="uk-card uk-card-default uk-card-body uk-margin-top uk-card-small cardColour"
+          class="
+            uk-card uk-card-default uk-card-body uk-margin-top uk-card-small
+            cardColour
+          "
         >
           Address
           <img src="img/qrImage.png" id="qrIconImage" onclick="" />
@@ -182,7 +194,10 @@
           </form>
         </div>
         <div
-          class="uk-card uk-card-default uk-card-body uk-margin-top uk-card-small cardColour"
+          class="
+            uk-card uk-card-default uk-card-body uk-margin-top uk-card-small
+            cardColour
+          "
           style="margin-bottom: 5%"
         >
           Balance<span
@@ -255,7 +270,11 @@
         <div style="height: 100%">
           <div
             id="txBox"
-            class="uk-card uk-card-default uk-card-body uk-card-small cardColour uk-margin-top"
+            class="
+              uk-card uk-card-default uk-card-body uk-card-small
+              cardColour
+              uk-margin-top
+            "
             style="height: 654px; color: ; padding: 10px; overflow: auto"
           >
             Current UTXOs
@@ -336,13 +355,7 @@ s
           modal.style.display = "none";
         }
       };
-      function sentTxDisplay() {
-        Swal.fire(
-          "Payment sent",
-          `<div style="margin-top: 20px">timestamp: ${txStatus.timestamp} </div> <br> <div onclick="openExplorer()" style="cursor: pointer; color: blue">txid: ${txStatus.txid} </div> <br> <div>minerId: ${txStatus.minerId}</div> <br> <div>signature: ${txData.signature}</div><br><div>publicKey: ${txData.publicKey}</div>`,
-          "success"
-        );
-      }
+      
       function copyHD() {
         var copyText = hdPrivateKeyText;
         copyText.select();

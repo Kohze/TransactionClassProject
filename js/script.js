@@ -62,6 +62,8 @@ const derivationPath = () => {
   generateQr();
 
   refreshBalance();
+
+  utxoUpdateUI();
 };
 
 const refreshBalance = function () {
@@ -129,7 +131,7 @@ generateMnemonic.addEventListener("click", function () {
   utxoUpdateUI();
 });
 
-////////////// Transaction Upgrade///////////////
+////////////// Transaction Course Upgrade///////////////
 ////////////////////////////////////////////////
 
 //declare variables
@@ -147,21 +149,6 @@ let utxoArray = [];
 let utxoCombinedAmount = 0;
 let utxoArrayInput = [];
 let openExplorer;
-
-////////////////////////////////////////////////////////////////////
-// function to get utxo data from address
-
-const utxoData = function () {
-  utxoArray = [];
-  let config = {
-    method: "get",
-    url: `https://api.mattercloud.net/api/v3/main/address/${address}/utxo`,
-  };
-  axios(config).then((response) => {
-    utxoArray = response.data;
-    console.log(utxoArray);
-  });
-};
 
 /////////////////////////////////////////////////////////////
 // refresh UI and update utxo data
@@ -204,7 +191,7 @@ const updateUtxo = function () {
 
 //////////////////////////////////////////////////////////////////
 // animate utxo DIVs that are removed from utxo array
-const animateDivs = function () {
+const animateUtxoDivs = function () {
   utxoArrayInput.forEach(function (a) {
     let section = document.getElementById(
       a.txid + a.script + a.vout + a.amount
@@ -218,14 +205,49 @@ const animateDivs = function () {
 ///////////////////////////////////////////////////////////////////
 // create function to update the UI with timeout to fetch data
 const utxoUpdateUI = function () {
-  utxoData();
+  setTimeout(() => {
+    utxoData();
+  }, 1000);
   setTimeout(() => {
     updateUtxo();
-  }, 1500);
+  }, 2500);
+};
+
+/////////////////////////////////////////////////////
+//successful transaction sequence for total UI update
+const txSuccess = function () {
+  setTimeout(() => {
+    utxoUpdateUI();
+    refreshBalance();
+    setTimeout(() => {
+      loader.style.visibility = "hidden";
+      sendTransaction.disabled = false;
+    }, 1000);
+  }, 4000);
+};
+
+/////////////////////////////////////////////////////////////////
+// Transaction Course Functions START HERE
+
+////////////////////////////////////////////////////////////////////
+// GET utxo data from address
+// STEP 1
+
+const utxoData = function () {
+  utxoArray = [];
+  let config = {
+    method: "get",
+    url: `https://api.mattercloud.net/api/v3/main/address/${address}/utxo`,
+  };
+  axios(config).then((response) => {
+    utxoArray = response.data;
+    console.log(utxoArray);
+  });
 };
 
 ////////////////////////////////////////////////////////////////////
-// create function to see if the satoshis in the utxos are < send amount
+// create function to see if the satoshis in the utxos are > send amount
+// STEP 2
 const checkSatoshis = function () {
   utxoCombinedAmount = 0;
   utxoArrayInput = [];
@@ -245,8 +267,61 @@ const checkSatoshis = function () {
   }
 };
 
+/////////////////////////////////////////////////////
+// Add event listener for send button
+// STEP 3
+
+sendTransaction.addEventListener("click", function () {
+  // build config
+  // STEP 4
+  checkSatoshis();
+  var config = {
+    safe: true,
+    data: ["Satolearn"],
+    pay: {
+      key: privateKey,
+      rpc: "https://api.mattercloud.net",
+      feeb: 0.5,
+      inputs: utxoArrayInput,
+      to: [
+        {
+          address: sendTo.value,
+          value: parseInt(amount.value),
+        },
+      ],
+    },
+  };
+
+  // dust limit error handling
+  // STEP 5
+  if (amount.value < 135) {
+    console.log("error 64 dust");
+    amount.style.outline = " solid red 1px";
+    amount.style.color = "red";
+    amount.value = "dust limit 135";
+  } else {
+    ///////////////////////////////////////////////////////
+    //build tx
+    // STEP 6
+    try {
+      filepay.build(config, function (error, tx) {
+        rawTX = tx.toString();
+        loader.style.visibility = "visible";
+        sendTransaction.disabled = true;
+        animateUtxoDivs();
+        pushTx();
+        txSuccess();
+      });
+    } catch (e) {
+      console.log(e);
+      sendTo.style.outline = "red solid 1px";
+    }
+  }
+});
+
 ////////////////////////////////////////////////////////
-//push tx
+// push tx
+// STEP 7
 const pushTx = async () => {
   const res = await axios.post(
     "https://merchantapi.taal.com/mapi/tx",
@@ -268,70 +343,19 @@ const pushTx = async () => {
 
   txStatus = JSON.parse(txid);
   console.log(txStatus);
-
+  sentTxModal();
   openExplorer = function () {
     window.open(`https://whatsonchain.com/tx/${txStatus.txid}`);
   };
 };
 
-/////////////////////////////////////////////////////
-//successful transaction sequence
-const txSuccess = function () {
-  setTimeout(() => {
-    utxoUpdateUI();
-    refreshBalance();
-    setTimeout(() => {
-      loader.style.visibility = "hidden";
-      sendTransaction.disabled = false;
-      sentTxDisplay();
-    }, 1500);
-  }, 4000);
-};
-
-/////////////////////////////////////////////////////
-// send transaction with all function sequences
-sendTransaction.addEventListener("click", function () {
-  checkSatoshis();
-  var config = {
-    safe: true,
-    data: ["Satolearn"],
-    pay: {
-      key: privateKey,
-      rpc: "https://api.mattercloud.net",
-      feeb: 0.5,
-      inputs: utxoArrayInput,
-      to: [
-        {
-          address: sendTo.value,
-          value: parseInt(amount.value),
-        },
-      ],
-    },
-  };
-
-  //add if statement if send amount is too low *135 min dust limit
-  if (amount.value < 135) {
-    console.log("error 64 dust");
-    amount.style.outline = " solid red 1px";
-    amount.style.color = "red";
-    amount.value = "dust limit 135";
-  } else {
-    ///////////////////////////////////////////////////////
-
-    //build tx
-    //catch error make border red on send to address
-    try {
-      filepay.build(config, function (error, tx) {
-        rawTX = tx.toString();
-        loader.style.visibility = "visible";
-        sendTransaction.disabled = true;
-        animateDivs();
-        pushTx();
-        txSuccess();
-      });
-    } catch (e) {
-      console.log(e);
-      sendTo.style.outline = "red solid 1px";
-    }
-  }
-});
+///////////////////////////////////////////////////////
+// transaction success pop up modal
+//STEP 8
+function sentTxModal() {
+  Swal.fire(
+    "Payment sent",
+    `<div style="margin-top: 20px">timestamp: ${txStatus.timestamp} </div> <br> <div onclick="openExplorer()" style="cursor: pointer; color: blue">txid: ${txStatus.txid} </div> <br> <div>minerId: ${txStatus.minerId}</div> <br> <div>signature: ${txData.signature}</div>`,
+    "success"
+  );
+}
