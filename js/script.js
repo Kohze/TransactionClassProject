@@ -228,132 +228,25 @@ const txSuccess = function () {
 // STEP 1
 // GET utxo data from address
 
-const utxoData = function () {
-  utxoArray = [];
-  let config = {
-    method: "get",
-    url: `https://api.mattercloud.net/api/v3/main/address/${address}/utxo`,
-  };
-  axios(config).then((response) => {
-    utxoArray = response.data;
-    console.log(utxoArray);
-  });
-};
-
 // STEP 2
 // create function to see if the satoshis in the utxos are > send amount
-
-const checkSatoshis = function () {
-  utxoCombinedAmount = 0;
-  utxoArrayInput = [];
-  for (let i in utxoArray) {
-    if (utxoCombinedAmount < amount.value) {
-      let el = utxoArray[i];
-      utxoArrayInput.push({
-        txid: el.txid,
-        amount: el.value,
-        script: el.scriptPubKey,
-        vout: el.vout,
-      });
-      utxoCombinedAmount += el.value;
-    } else {
-      break;
-    }
-  }
-};
 
 // STEP 3
 // Add event listener for send button
 
-sendTransaction.addEventListener("click", function () {
-  // STEP 4
-  // build config
+// STEP 4
+// build config
 
-  checkSatoshis();
-  var config = {
-    safe: true,
-    data: ["Satolearn"],
-    pay: {
-      key: privateKey,
-      rpc: "https://api.mattercloud.net",
-      feeb: 0.5,
-      inputs: utxoArrayInput,
-      to: [
-        {
-          address: sendTo.value,
-          value: parseInt(amount.value),
-        },
-      ],
-    },
-  };
+// STEP 5
+// dust limit error handling
 
-  // STEP 5
-  // dust limit error handling
-
-  if (amount.value < 135) {
-    console.log("error 64 dust");
-    amount.style.outline = " solid red 1px";
-    amount.style.color = "red";
-    amount.value = "dust limit 135";
-  } else {
-    // STEP 6
-    //build tx
-
-    try {
-      filepay.build(config, function (error, tx) {
-        rawTX = tx.toString();
-        loader.style.visibility = "visible";
-        sendTransaction.disabled = true;
-        animateUtxoDivs();
-        pushTx();
-        txSuccess();
-      });
-    } catch (e) {
-      console.log(e);
-      sendTo.style.outline = "red solid 1px";
-    }
-  }
-});
+// STEP 6
+//build tx
 
 // STEP 7
 // push tx
 
-const pushTx = async () => {
-  const res = await axios.post(
-    "https://merchantapi.taal.com/mapi/tx",
-    { rawtx: rawTX },
-    {
-      headers: {
-        "content-type": "application/json",
-      },
-    }
-  );
-  //reset variables
-  txData = 0;
-  txid = 0;
-  txStatus = 0;
-
-  txData = res.data;
-  console.log(txData);
-  txid = txData.payload;
-
-  txStatus = JSON.parse(txid);
-  console.log(txStatus);
-  sentTxModal();
-  openExplorer = function () {
-    window.open(`https://whatsonchain.com/tx/${txStatus.txid}`);
-  };
-};
-
 //STEP 8
 // transaction success pop up modal
-
-function sentTxModal() {
-  Swal.fire(
-    "Payment sent",
-    `<div style="margin-top: 20px">timestamp: ${txStatus.timestamp} </div> <br> <div onclick="openExplorer()" style="cursor: pointer; color: blue">txid: ${txStatus.txid} </div> <br> <div>minerId: ${txStatus.minerId}</div> <br> <div>signature: ${txData.signature}</div>`,
-    "success"
-  );
-}
 
 /*------- Transaction course end ------------*/
