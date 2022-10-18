@@ -70,9 +70,7 @@ const refreshBalance = function () {
   let config = {
     method: "get",
     url:
-      "https://api.whatsonchain.com/v1/bsv/main/address/" +
-      address +
-      "/balance",
+      `https://api.whatsonchain.com/v1/bsv/main/address/${address}/balance`,
   };
   axios(config).then((response) => {
     let data = JSON.stringify(response.data);
@@ -81,6 +79,15 @@ const refreshBalance = function () {
     p.value = data;
   });
 };
+
+const getBalanceFromUtxos =  () => {
+  let balance = 0
+  allUtxos.forEach(e => {
+    balance += e.satoshis
+  })
+  let p = document.getElementById("balance");
+    p.value = balance;
+}
 
 const submitMnemonic = function () {
   try {
@@ -140,13 +147,12 @@ let amount = document.getElementById("amountText");
 let utxoAppend = document.getElementById("utxoAppend");
 let loader = document.getElementById("loader");
 
-let txData;
 let txid;
 let txStatus;
 let rawTX;
-let utxoArray = [];
+let allUtxos = [];
 let utxoCombinedAmount = 0;
-let utxoArrayInput = [];
+let txUtxos = [];
 let openExplorer;
 
 // refresh UI and update utxo data
@@ -154,29 +160,29 @@ const updateUtxo = function () {
   while (utxoAppend.firstChild) {
     utxoAppend.removeChild(utxoAppend.firstChild);
   }
-  utxoArray.forEach(function (arr) {
+  allUtxos.forEach(e => {
     const html = `
         <div id="${
-          arr.txid + arr.scriptPubKey + arr.vout + arr.satoshis
+          e.txid + e.vout
         }" style="display: flex; width: 100%">
     
           <div style="min-height: 50px; max-height: 50px; padding: 10px 0px; background-color: rgb(255, 165, 0, 0.3); min-width: 16%"><div style="padding: 10px">${
-            arr.satoshis
+            e.satoshis
           }</div> </div>
     
           <div style="word-wrap: break-word; min-height: 50px; max-height: 50px; padding: 10px 0px; background-color: rgba(0, 255, 0, 0.3); min-width: 9%"><div style="padding: 10px">${
-            arr.vout
+            e.vout
           }</div>
            </div>
     
           <div 
           style="word-wrap: break-word; min-height: 50px; max-height: 50px; padding:10px 0px; background-color: rgba(0, 0, 255, 0.3); cursor: pointer; min-width: 42%"><div style="padding: 10px">${
-            arr.txid
+            e.txid
           }</div>
           </div>
     
           <div style="word-wrap: break-word; min-height: 50px; max-height: 50px; padding:10px 0px;  background-color: rgba(128,0,128,0.3); min-width: 33%"><div style="padding: 10px">${
-            arr.scriptPubKey
+            bsv.Script.buildPublicKeyHashOut(address).toHex()
           }</div>
             
            </div>
@@ -189,13 +195,16 @@ const updateUtxo = function () {
 
 // animate utxo DIVs that are removed from utxo array
 const animateUtxoDivs = function () {
-  utxoArrayInput.forEach(function (a) {
+  txUtxos.forEach((a)  => {
     let section = document.getElementById(
-      a.txid + a.script + a.vout + a.amount
+      a.txid + a.vout
     );
     section.style.color = "red";
     section.style.opacity = 0;
     section.style.transition = "opacity 3s linear 2.5s, color 1s linear 0s";
+    setTimeout(() => {
+      section.remove()
+    }, 2000);
   });
 };
 
@@ -212,13 +221,13 @@ const utxoUpdateUI = function () {
 //successful transaction sequence for total UI update
 const txSuccess = function () {
   setTimeout(() => {
-    utxoUpdateUI();
-    refreshBalance();
+    updateUtxo();
+    getBalanceFromUtxos();
     setTimeout(() => {
       loader.style.visibility = "hidden";
       sendTransaction.disabled = false;
     }, 1000);
-  }, 4000);
+  }, 3000);
 };
 
 //////////////////////////////////////////////////////
@@ -226,122 +235,115 @@ const txSuccess = function () {
 //////////////////////////////////////////////////////
 
 // STEP 1
-// GET utxo data from address
+// GET utxo data from address - convert to transaction standard values
 
-const utxoData = function () {
-  utxoArray = [];
-  let config = {
-    method: "get",
-    url: `https://api.mattercloud.net/api/v3/main/address/${address}/utxo`,
-  };
-  axios(config).then((response) => {
-    utxoArray = response.data;
-    console.log(utxoArray);
+const utxoData = async () => { 
+  let utxoData = await axios.get(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unspent`, {
   });
+  utxoData.data.forEach(e => {
+    allUtxos.push({
+        txid: e.tx_hash,
+        amount: e.value / 100000000, // convert to decimals
+        script: bsv.Script.buildPublicKeyHashOut(address).toHex(),
+        vout: e.tx_pos,
+        satoshis : e.value
+    })
+  })
 };
 
 // STEP 2
 // create function to see if the satoshis in the utxos are > send amount
 
-const checkSatoshis = function () {
+const getUtxosForTransaction = async () => {
   utxoCombinedAmount = 0;
-  utxoArrayInput = [];
-  for (let i in utxoArray) {
-    if (utxoCombinedAmount < amount.value) {
-      let el = utxoArray[i];
-      utxoArrayInput.push({
-        txid: el.txid,
-        amount: el.value,
-        script: el.scriptPubKey,
-        vout: el.vout,
-      });
-      utxoCombinedAmount += el.value;
+  txUtxos = [];
+  let feeAmount = 50 // 2 outputs fees at 500 sats per Kb approx
+  for(let i = 0; i < allUtxos.length; i ++ ){
+    if (utxoCombinedAmount < parseInt(amount.value) + feeAmount) {
+      let el = allUtxos[i];
+      txUtxos.push(el);
+      utxoCombinedAmount += el.satoshis;
+      feeAmount += 74 // add one input fees at 500 sats per Kb approx
     } else {
+      allUtxos.splice(0, i)
+      console.log(allUtxos)
       break;
+    }
+    if(i === allUtxos.length -1){
+      allUtxos = []
     }
   }
 };
 
 // STEP 3
 // Add event listener for send button
+sendTransaction.addEventListener("click", async function () {
 
-sendTransaction.addEventListener("click", function () {
   // STEP 4
-  // build config
+  // build tx
+  await getUtxosForTransaction();
+  const tx = bsv.Transaction()
+  tx.from(txUtxos)
+  tx.to(sendTo.value, parseInt(amount.value))
+  tx.change(address)
+  tx.sign(privateKey)
 
-  checkSatoshis();
-  var config = {
-    safe: true,
-    data: ["Satolearn"],
-    pay: {
-      key: privateKey,
-      rpc: "https://api.mattercloud.net",
-      feeb: 0.5,
-      inputs: utxoArrayInput,
-      to: [
-        {
-          address: sendTo.value,
-          value: parseInt(amount.value),
-        },
-      ],
-    },
-  };
 
-  // STEP 5
-  // dust limit error handling
+  
 
-  if (amount.value < 135) {
-    console.log("error 64 dust");
-    amount.style.outline = " solid red 1px";
-    amount.style.color = "red";
-    amount.value = "dust limit 135";
-  } else {
-    // STEP 6
-    //build tx
+// STEP 5
+// broadcast and update UI
+  try {   
+      rawTX = tx.toString();
+      loader.style.visibility = "visible";
+      sendTransaction.disabled = true;
+      animateUtxoDivs();
+      await pushTx();
 
-    try {
-      filepay.build(config, function (error, tx) {
-        rawTX = tx.toString();
-        loader.style.visibility = "visible";
-        sendTransaction.disabled = true;
-        animateUtxoDivs();
-        pushTx();
-        txSuccess();
-      });
-    } catch (e) {
-      console.log(e);
-      sendTo.style.outline = "red solid 1px";
-    }
+
+      // STEP 6
+      // get change utxo 
+      const txObject = tx.toObject()
+      // check if there is a change UTXO if more than one output in transaction 
+      if(txObject.outputs.length > 1){
+        allUtxos.push({
+          txid: txObject.hash,
+          amount: txObject.outputs[1].satoshis / 100000000,
+          script: txObject.outputs[1].script,
+          vout: 1,
+          satoshis : txObject.outputs[1].satoshis
+        })
+      }
+
+      txSuccess();   
+  } catch (e) {
+    console.log(e);
+    sendTo.style.outline = "red solid 1px";
   }
+  
 });
 
 // STEP 7
 // push tx
-
 const pushTx = async () => {
   const res = await axios.post(
-    "https://merchantapi.taal.com/mapi/tx",
-    { rawtx: rawTX },
+    "https://api.whatsonchain.com/v1/bsv/main/tx/raw",
+    { txHex: rawTX },
     {
       headers: {
         "content-type": "application/json",
       },
     }
   );
-  //reset variables
-  txData = 0;
-  txid = 0;
-  txStatus = 0;
-
-  txData = res.data;
-  console.log(txData);
-  txid = txData.payload;
-
-  txStatus = JSON.parse(txid);
-  console.log(txStatus);
+  
+  txid = res.data
+  if(res.status === 200){
+    txStatus = "Transaction Successful"
+  }
+  
   sentTxModal();
   openExplorer = function () {
-    window.open(`https://whatsonchain.com/tx/${txStatus.txid}`);
+    window.open(`https://whatsonchain.com/tx/${txid}`);
   };
 };
 
@@ -349,9 +351,11 @@ const pushTx = async () => {
 // transaction success pop up modal
 
 function sentTxModal() {
+  const d = new Date();
+  let time = d.getTime(); 
   Swal.fire(
     "Payment sent",
-    `<div style="margin-top: 20px">timestamp: ${txStatus.timestamp} </div> <br> <div onclick="openExplorer()" style="cursor: pointer; color: blue">txid: ${txStatus.txid} </div> <br> <div>minerId: ${txStatus.minerId}</div> <br> <div>signature: ${txData.signature}</div>`,
+    `<div style="margin-top: 20px">timestamp: ${time} </div> <br> <div onclick="openExplorer()" style="cursor: pointer; color: blue">txid: ${txid} </div> <br> <div>Status: ${txStatus}</div>`,
     "success"
   );
 }
